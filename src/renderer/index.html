@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' memry: data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Memry</title>
+  </head>
+  <body>
+    <div id="app">
+      <aside id="sidebar"></aside>
+
+      <main id="main">
+        <section id="topbar">
+          <button
+            id="sidebar-expand-btn"
+            class="topbar-icon-btn"
+            title="Show sidebar"
+            aria-label="Show sidebar"
+            type="button"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <line x1="9" y1="3" x2="9" y2="21"/>
+            </svg>
+          </button>
+          <div id="tabs"></div>
+          <div id="topbar-actions">
+            <button
+              id="help-btn"
+              class="topbar-icon-btn"
+              title="Help (⌘/)"
+              aria-label="Help"
+              type="button"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.3" />
+                <text x="8" y="11.5" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor" font-family="-apple-system, sans-serif">?</text>
+              </svg>
+            </button>
+            <div class="record-control">
+              <button
+                id="record-btn"
+                class="topbar-icon-btn"
+                title="Recording options"
+                aria-label="Recording options"
+                aria-haspopup="true"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                  <circle cx="8" cy="8" r="5" fill="currentColor" />
+                </svg>
+              </button>
+              <div id="record-popover" class="record-popover" hidden></div>
+            </div>
+          </div>
+        </section>
+        <section id="editor"></section>
+
+        <section id="graph-tab-view" hidden>
+          <header class="graph-tab-header">
+            <h3 class="graph-tab-title" data-graph-tab-title></h3>
+          </header>
+          <div class="graph-tab-body">
+            <div id="graph-tab-container"></div>
+            <aside class="graph-tab-detail" data-graph-tab-detail hidden>
+              <header class="graph-tab-detail-header">
+                <h4 class="graph-tab-detail-title" data-graph-tab-detail-title></h4>
+                <button class="graph-tab-detail-close" data-graph-tab-detail-close type="button" aria-label="Close detail">×</button>
+              </header>
+              <p class="graph-tab-detail-desc" data-graph-tab-detail-desc></p>
+              <h5 class="graph-tab-detail-sources-label">From the transcript</h5>
+              <ul class="graph-tab-detail-sources" data-graph-tab-detail-sources></ul>
+            </aside>
+          </div>
+        </section>
+
+        <section id="new-tab-placeholder" hidden>
+          <div class="new-tab-card">
+            <h2 class="new-tab-title">New tab</h2>
+            <button class="new-tab-action" data-action="new-note">New note</button>
+            <button class="new-tab-action" data-action="open-existing">Open existing…</button>
+          </div>
+        </section>
+
+        <section id="transcription" hidden>
+          <div id="transcript"></div>
+        </section>
+      </main>
+
+      <aside id="side-panel" hidden>
+        <header class="panel-header">
+          <h3 class="panel-title">Analysis</h3>
+          <div class="panel-header-actions">
+            <button class="panel-reanalyze" title="Re-run analysis on the active entry" aria-label="Re-analyze">↻</button>
+            <button class="panel-close" title="Hide (⌘E)" aria-label="Hide analysis panel">×</button>
+          </div>
+        </header>
+
+        <div class="panel-loading-bar" data-loading-bar hidden aria-label="Analyzing transcript">
+          <div class="panel-loading-bar-inner"></div>
+        </div>
+
+        <div class="panel-history" data-history hidden>
+          <select class="panel-history-select" data-history-select aria-label="Pick analysis entry"></select>
+          <button class="panel-history-delete" data-history-delete title="Delete this entry" aria-label="Delete entry">🗑</button>
+        </div>
+
+        <section class="panel-section panel-section--collapsible" data-section="summary">
+          <button class="panel-section-header" data-section-toggle type="button">
+            <span class="panel-section-chevron" aria-hidden="true">▾</span>
+            <span class="panel-section-title">Summary</span>
+          </button>
+          <div class="panel-section-body" data-section-body>
+            <div class="panel-empty" data-empty>Record a meeting to generate a summary.</div>
+            <div class="panel-content" data-content hidden></div>
+          </div>
+        </section>
+
+        <section class="panel-section panel-section--collapsible" data-section="writing-about">
+          <button class="panel-section-header" data-section-toggle type="button">
+            <span class="panel-section-chevron" aria-hidden="true">▾</span>
+            <span class="panel-section-title">Writing about</span>
+          </button>
+          <div class="panel-section-body" data-section-body>
+            <div class="panel-empty" data-empty>Topics matching your current paragraph appear here.</div>
+            <div class="panel-content" data-content hidden></div>
+          </div>
+        </section>
+
+        <section class="panel-section panel-section--collapsible panel-section-graph" data-section="graph">
+          <div class="panel-section-header-row">
+            <button class="panel-section-header" data-section-toggle type="button">
+              <span class="panel-section-chevron" aria-hidden="true">▾</span>
+              <span class="panel-section-title">Graph</span>
+            </button>
+            <div class="panel-section-actions">
+              <button class="panel-section-action" data-graph-popout title="Open graph in a new tab" aria-label="Open graph in new tab">↗</button>
+              <span class="panel-section-action panel-section-drag" data-graph-drag title="Drag to open in a new tab" aria-label="Drag graph to new tab" draggable="true">⋮⋮</span>
+            </div>
+          </div>
+          <div class="panel-section-body" data-section-body>
+            <div class="panel-empty" data-empty>Topic map appears after analysis.</div>
+            <div id="graph-container" data-content hidden></div>
+          </div>
+        </section>
+
+        <section class="panel-section node-detail" data-section="node-detail" hidden>
+          <header class="node-detail-header">
+            <h4 class="panel-section-title" data-node-title></h4>
+            <button class="node-detail-close" aria-label="Close node detail">×</button>
+          </header>
+          <p class="node-detail-description" data-node-description></p>
+          <h5 class="node-detail-sources-label">From the transcript</h5>
+          <ul class="node-detail-sources" data-node-sources></ul>
+        </section>
+
+        <section class="panel-section panel-section--collapsible" data-section="transcript">
+          <button class="panel-section-header" data-section-toggle type="button">
+            <span class="panel-section-chevron" aria-hidden="true">▾</span>
+            <span class="panel-section-title">Transcript</span>
+          </button>
+          <div class="panel-section-body" data-section-body>
+            <div class="panel-empty" data-empty>Record a meeting to see its transcript.</div>
+            <div class="panel-content panel-transcript" data-content hidden></div>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <script type="module" src="./editor-main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' memry: data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quick note</title>
+  </head>
+  <body class="overlay-body">
+    <div id="overlay-card" class="sticky-card-shell">
+      <div class="sticky-bar">
+        <span class="sticky-hint">
+          <kbd>⌘</kbd><kbd>↵</kbd> save · <kbd>esc</kbd> dismiss
+        </span>
+        <div class="sticky-bar-buttons">
+          <button
+            id="overlay-save-sticky"
+            type="button"
+            class="sticky-bar-text-btn"
+            title="Save current text as a sticky note"
+          >save as sticky</button>
+          <button id="overlay-sticky" type="button" title="New blank sticky note">+</button>
+          <button id="overlay-close" type="button" title="Dismiss">×</button>
+        </div>
+      </div>
+      <textarea
+        id="overlay-input"
+        placeholder="Quick note…"
+        spellcheck="false"
+      ></textarea>
+    </div>
+
+    <script type="module" src="./overlay-main.ts"></script>
+  </body>
+</html>

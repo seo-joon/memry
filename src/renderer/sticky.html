@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sticky</title>
+  </head>
+  <body class="sticky-body">
+    <div id="sticky-card">
+      <div class="sticky-bar">
+        <div class="sticky-bar-buttons">
+          <button id="sticky-new" type="button" title="New sticky">+</button>
+          <button id="sticky-close" type="button" title="Close">×</button>
+        </div>
+      </div>
+      <div id="sticky-editor"></div>
+    </div>
+
+    <script type="module" src="./sticky-main.ts"></script>
+  </body>
+</html>

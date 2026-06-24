@@ -1,0 +1,70 @@
+{
+  "name": "memry",
+  "version": "0.1.0",
+  "description": "A lightweight, single-user note-taking app with AI meeting/lecture transcription.",
+  "main": "./out/main/index.js",
+  "author": "Alex Zhang",
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit",
+    "package": "electron-vite build && electron-builder --mac dmg",
+    "postinstall": "node -e \"const {execSync}=require('child_process');const p='node_modules/electron/dist/Electron.app/Contents/Info.plist';try{execSync(`/usr/libexec/PlistBuddy -c 'Set :CFBundleName Memry' -c 'Set :CFBundleDisplayName Memry' '${p}'`)}catch(e){}\""
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.2",
+    "@codemirror/commands": "^6.10.3",
+    "@codemirror/lang-markdown": "^6.5.0",
+    "@codemirror/language": "^6.12.3",
+    "@codemirror/state": "^6.6.0",
+    "@codemirror/view": "^6.43.1",
+    "@lezer/common": "^1.5.2",
+    "@types/cytoscape": "^3.21.9",
+    "codemirror": "^6.0.2",
+    "cytoscape": "^3.34.0",
+    "dotenv": "^16.4.5",
+    "electron-audio-loopback": "^1.0.6",
+    "ffmpeg-static": "^5.3.0",
+    "katex": "^0.16.47",
+    "nodejs-whisper": "^0.3.0",
+    "openai": "^6.44.0"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.0.0",
+    "@types/katex": "^0.16.8",
+    "@types/node": "^22.0.0",
+    "electron": "^42.4.0",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "typescript": "^5.6.0",
+    "vite": "^7.3.5"
+  },
+  "build": {
+    "appId": "dev.alexzhang.memry",
+    "productName": "Memry",
+    "copyright": "Copyright © 2026 Alex Zhang",
+    "files": [
+      "out/**/*"
+    ],
+    "extraResources": [
+      { "from": ".env", "to": ".env" }
+    ],
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Memry records meeting and lecture audio to generate live transcripts.",
+        "NSScreenCaptureUsageDescription": "Memry captures system audio while transcribing meetings and lectures."
+      }
+    }
+  }
+}

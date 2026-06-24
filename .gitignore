@@ -1,0 +1,69 @@
+# ---- Dependencies ----
+node_modules/
+
+# ---- Build output ----
+# electron-vite dev build → out/
+# electron-builder production build → dist/
+out/
+dist/
+*.dmg
+*.dmg.blockmap
+
+# ---- Generated icon artifacts ----
+# Regenerated from build/source.png via sips + iconutil. Source PNG and
+# entitlements.mac.plist are committed; the generated files are not.
+build/icon.icns
+build/icon.iconset/
+
+# ---- Secrets ----
+# .env contains API keys and ships bundled into the packaged DMG.
+# Never commit it. .env.example documents the required keys and IS committed.
+.env
+.env.*
+!.env.example
+
+# ---- Logs ----
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+
+# ---- TypeScript incremental ----
+*.tsbuildinfo
+
+# ---- Vite / Electron caches ----
+.vite/
+.electron-vite/
+.cache/
+
+# ---- IDE / editor ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ---- macOS ----
+.DS_Store
+**/.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# ---- Windows ----
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ---- Linux ----
+.fuse_hidden*
+.Trash-*
+
+# ---- Misc ----
+*.bak
+*.orig
+*.tmp
+tmp/
+.tmp/
