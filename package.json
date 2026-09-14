@@ -71,6 +71,7 @@
       "electronLanguages": [
         "en"
       ]
-    }
+    },
+    "afterPack": "build/adhoc-sign.js"
   }
 }
