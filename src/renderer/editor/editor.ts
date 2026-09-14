@@ -22,6 +22,9 @@ export interface EditorHandle {
 export interface CreateEditorOptions {
   initial?: string
   onChange?: (doc: string) => void
+  // Fires when the caret moves without the doc changing. Kept separate from
+  // onChange so cursor movement doesn't trigger a disk save.
+  onCaretMove?: () => void
   onOpenNote?: (target: string) => void
   // Default true. Pass false for compact surfaces (stickies) that don't want a gutter.
   lineNumbers?: boolean
@@ -56,6 +59,7 @@ export function createEditor(parent: HTMLElement, opts: CreateEditorOptions): Ed
           if (u.docChanged && !u.transactions.some((t) => t.annotation(externalLoad))) {
             opts.onChange?.(u.state.doc.toString())
           }
+          if (u.selectionSet) opts.onCaretMove?.()
         })
       ]
     })

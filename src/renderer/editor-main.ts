@@ -84,6 +84,7 @@ const editor = createEditor(editorEl, {
     if (activeId()) scheduleSave(doc)
     scheduleWritingAbout()
   },
+  onCaretMove: () => scheduleWritingAbout(),
   onOpenNote: (target) => void openWikiTarget(target),
   ghostText: {
     request: async (paragraph) => {

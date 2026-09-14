@@ -12,7 +12,7 @@
 
 export type ListenMode = 'microphone' | 'system' | 'recording'
 
-const DEFAULT_CHUNK_MS = 4_000
+const DEFAULT_CHUNK_MS = 12_000
 const MIME = 'audio/webm;codecs=opus'
 
 export class Recorder {
