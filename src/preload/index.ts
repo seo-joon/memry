@@ -70,6 +70,14 @@ const api: Api = {
   },
   suggest: {
     complete: (noteId, paragraph) => ipcRenderer.invoke(CH.suggestComplete, noteId, paragraph)
+  },
+  settings: {
+    get: () => ipcRenderer.invoke(CH.settingsGet),
+    set: (keys) => ipcRenderer.invoke(CH.settingsSet, keys)
+  },
+  keybinds: {
+    get: () => ipcRenderer.invoke(CH.keybindsGet),
+    set: (id, on) => ipcRenderer.invoke(CH.keybindsSet, id, on)
   }
 }
 

@@ -1,7 +1,7 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron'
 import type { Rectangle } from 'electron'
 import { CH } from '../shared/ipc'
-import type { CreateNote, SessionId } from '../shared/ipc'
+import type { CreateNote, SessionId, SettingsKeys } from '../shared/ipc'
 import {
   readVaultTree,
   readNote,
@@ -18,6 +18,8 @@ import {
 } from './vault'
 import { transcribe } from './services/transcription'
 import { cleanup } from './services/cleanup'
+import { getUserKeys, saveUserKeys } from './keys'
+import { resetOpenAI } from './services/openai-client'
 import { runAnalysis, replaceEntry, readEntries, deleteEntry } from './services/analysis'
 import { suggest } from './services/suggest'
 import { startSession, appendChunk, endSession } from './services/transcript-buffer'
@@ -26,7 +28,8 @@ import {
   screenAccessStatus,
   openScreenRecordingSettings
 } from './audio-permissions'
-import { getOverlayWindow } from './windows'
+import { getOverlayWindow, setQuickCaptureEnabled, setCloseTabEnabled } from './windows'
+import { getKeybinds, setKeybind } from './prefs'
 import { createSticky, getStickyText, updateSticky, closeSticky, setStickiesVisible } from './stickies'
 
 export function registerIpc(): void {
@@ -85,6 +88,34 @@ export function registerIpc(): void {
   ipcMain.handle(CH.suggestComplete, (_e, noteId: string, paragraph: string) =>
     suggest(noteId, paragraph)
   )
+
+  // --- settings (per-Mac API keys) ---
+  ipcMain.handle(CH.settingsGet, () => getUserKeys())
+  ipcMain.handle(CH.settingsSet, async (_e, keys: SettingsKeys) => {
+    await saveUserKeys(keys)
+    // Keys apply at once: transcription reads env per call, the OpenAI client
+    // needs its cached instance dropped.
+    if (keys.openaiApiKey.trim()) process.env.OPENAI_API_KEY = keys.openaiApiKey.trim()
+    else delete process.env.OPENAI_API_KEY
+    if (keys.groqApiKey.trim()) process.env.GROQ_API_KEY = keys.groqApiKey.trim()
+    else delete process.env.GROQ_API_KEY
+    resetOpenAI()
+  })
+
+  // --- shortcut toggles ---
+  ipcMain.handle(CH.keybindsGet, () => getKeybinds())
+  ipcMain.handle(CH.keybindsSet, async (_e, id: string, on: boolean) => {
+    const map = await setKeybind(id, on)
+    // The two main-owned shortcuts apply at once; renderer-owned ones are
+    // picked up live in the editor window.
+    if (id === 'quickCapture') {
+      const overlay = getOverlayWindow()
+      if (overlay) setQuickCaptureEnabled(on, overlay)
+    } else if (id === 'closeTab') {
+      setCloseTabEnabled(on)
+    }
+    return map
+  })
 
   // --- audio permissions ---
   ipcMain.handle(CH.micEnsure, () => ensureMicAccess())

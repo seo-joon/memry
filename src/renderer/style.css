@@ -10,7 +10,9 @@
   --bg-topbar: #f5f4f0;
   --bg-subtle: #f4f4f2;
   --bg-hover: #e8e7e3;
+  --bg-hover-strong: #dcdad4;
   --border: #e8e7e3;
+  --border-strong: #d5d4cf;
   --text: #1f1f1d;
   --text-muted: #8a8a85;
   --accent: #3a6ff7;
@@ -80,14 +82,17 @@ button:active {
 #app {
   position: relative;
   display: grid;
-  grid-template-columns: 240px 1fr;
+  /* Three tracks at all times; the panel opens by growing its track 0px to
+   * 360px so the editor slides instead of jumping. (Dropping the track or
+   * display:none-ing the panel would skip the transition.) */
+  grid-template-columns: 240px 1fr 0px;
   height: 100vh;
   overflow: hidden;
   transition: grid-template-columns 0.18s ease;
 }
 
 #app:has(#sidebar.collapsed) {
-  grid-template-columns: 0 1fr;
+  grid-template-columns: 0 1fr 0px;
 }
 
 #app.side-open {
@@ -212,7 +217,12 @@ button:active {
 }
 
 .tree-row:hover {
-  background: var(--bg-hover);
+  background: var(--bg-hover-strong);
+}
+
+/* Folders read as structure: semibold next to regular-weight notes. */
+.tree-folder > .tree-name {
+  font-weight: 600;
 }
 
 /* Multi-selection bg (Cmd/Shift-click set). Same accent-soft as `.active` so the
@@ -247,7 +257,7 @@ button:active {
   bottom: 2px;
   left: var(--guide-x, 16px);
   width: 1px;
-  background: var(--border);
+  background: var(--border-strong);
   pointer-events: none;
 }
 
@@ -373,7 +383,7 @@ button:active {
 
 @keyframes record-pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.45; }
+  50% { opacity: 0.35; }
 }
 
 .tab,
@@ -451,7 +461,7 @@ button:active {
 }
 
 .tab.dragging {
-  opacity: 0.4;
+  opacity: 0.3;
 }
 
 .tab.drop-before::after,
@@ -774,6 +784,10 @@ button:active {
    * of flush against the pane's left wall. Gutter is a flex item of the scroller, so
    * shifting the scroller's left inset moves the gutter and content together. */
   padding-left: max(0px, calc((100% - 760px) / 2));
+  /* The top pad lives here and NOT on .cm-content: the gutter column starts at the
+   * scroller's top, so padding the content alone pushes the text down while every
+   * line number stays put. */
+  padding-top: var(--space-5);
 }
 
 #editor .cm-content {
@@ -781,7 +795,7 @@ button:active {
   /* No `margin: 0 auto` anymore — centering happens via scroller padding above, which
    * also takes the gutter along for the ride. */
   margin: 0;
-  padding: var(--space-5) var(--space-4) 40vh;
+  padding: 0 var(--space-4) 40vh;
 }
 
 #editor .cm-gutters {
@@ -905,6 +919,20 @@ button:active {
   -webkit-app-region: no-drag;
 }
 
+/* Elapsed-time pill beside the record button. The topbar never switches with
+ * tabs, so this doubles as the recording indicator everywhere. */
+.record-elapsed {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--danger);
+  margin-left: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.record-elapsed[hidden] {
+  display: none;
+}
+
 .record-popover {
   position: absolute;
   top: calc(100% + 6px);
@@ -987,6 +1015,25 @@ button:active {
   display: none;
 }
 
+/* Input level meter: thin track with a fill driven by the live mic level. */
+.record-meter {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.record-meter[hidden] {
+  display: none;
+}
+
+.record-meter-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
 .record-popover-banner {
   font-size: 12px;
   color: var(--danger);
@@ -1067,10 +1114,28 @@ button:active {
 
 #sticky-card,
 #overlay-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100vh;
   background: var(--sticky);
+}
+
+/* Corner grip: a pure visual cue that the frameless card resizes. It lets
+ * pointer events through so the native window-edge drag still engages. */
+#sticky-card::after,
+#overlay-card::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid var(--border);
+  border-bottom: 2px solid var(--border);
+  border-bottom-right-radius: 4px;
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 .sticky-bar {
@@ -1186,7 +1251,9 @@ button:active {
 #side-panel {
   display: flex;
   flex-direction: column;
-  border-left: 1px solid var(--border);
+  /* The divider paints only while open; at 0px track width a real border would
+   * stick out as a stray hairline. */
+  border-left: 1px solid transparent;
   /* Transparent at the panel level so the panel-header strip shows vibrancy
    * (matching the topbar on the editor side). Each section/row below paints
    * its own --bg so the rest of the panel still reads as paper. */
@@ -1194,10 +1261,18 @@ button:active {
   overflow-y: auto;
   overflow-x: hidden;
   min-width: 0;
+  /* Never display:none: the panel stays in flow at 0px and fades, so the grid
+   * track transition above actually runs on both open and close. Visibility
+   * flips at the end of the fade-out, keeping closed controls untabbable. */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.18s ease, border-color 0.18s ease, visibility 0.18s;
 }
 
-#side-panel[hidden] {
-  display: none;
+#app.side-open #side-panel {
+  opacity: 1;
+  visibility: visible;
+  border-left-color: var(--border);
 }
 
 .panel-header {
@@ -1247,7 +1322,7 @@ button:active {
 }
 
 .panel-reanalyze:disabled {
-  opacity: 0.4;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
@@ -1830,7 +1905,7 @@ button:active {
 /* ---------- Ghost text (inline suggestions) ---------- */
 .cm-ghost-text {
   color: var(--text-muted);
-  opacity: 0.55;
+  opacity: 0.45;
   font-style: italic;
   pointer-events: none;
   white-space: pre-wrap;
@@ -1839,4 +1914,85 @@ button:active {
 
 #sticky-editor .cm-content {
   padding: var(--space-3);
+}
+
+/* ---------- Settings ---------- */
+
+.settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: var(--space-4);
+}
+
+.settings-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.settings-input {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+}
+
+.settings-caption {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.settings-save {
+  font-weight: 600;
+}
+
+.settings-status {
+  font-size: 12px;
+  color: var(--text-muted);
+  min-height: 16px;
+}
+
+.settings-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: var(--space-4);
+}
+
+.settings-subhead {
+  font-size: 14px;
+  font-weight: 700;
+  margin: var(--space-5) 0 var(--space-1);
+}
+
+.settings-shortcut {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 6px 0;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.settings-shortcut span {
+  flex: 1;
+}
+
+.settings-shortcut kbd {
+  font-family: var(--font);
+  font-size: 11px;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
 }

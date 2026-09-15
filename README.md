@@ -22,6 +22,10 @@ cp .env.example .env   # then add your key (optional — app runs in stub mode w
 `.env` keys (optional for v1):
 - `OPENAI_API_KEY` — cloud transcription (Whisper). Blank → transcript shows a stub.
 
+In the packaged app there is no `.env` file. Open Settings (sliders button,
+top right) and paste your keys there instead. They stay on that Mac, encrypted
+with the login Keychain.
+
 ## Run
 
 ```bash

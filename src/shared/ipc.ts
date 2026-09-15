@@ -53,7 +53,15 @@ export const CH = {
   analysisDelete: 'analysis:delete', // (noteId, entryId) => void
 
   // --- inline suggestions (cheap model, fed analysis result as context) ---
-  suggestComplete: 'suggest:complete' // (noteId, paragraph) => string
+  suggestComplete: 'suggest:complete', // (noteId, paragraph) => string
+
+  // --- settings (per-Mac API keys; kept out of the installer) ---
+  settingsGet: 'settings:get', // () => SettingsKeys
+  settingsSet: 'settings:set', // (keys) => void
+
+  // --- shortcut toggles (stored in userData/settings.json) ---
+  keybindsGet: 'keybinds:get', // () => KeybindMap
+  keybindsSet: 'keybinds:set' // (id, on) => KeybindMap
 } as const
 
 // A note in the vault tree. `id` is the vault-relative path (POSIX separators, includes .md).
@@ -96,6 +104,15 @@ export interface TransAppendPayload {
   sessionId: SessionId
   delta: string
 }
+
+// API keys stored on this Mac only (Settings panel). Never bundled, never synced.
+export interface SettingsKeys {
+  openaiApiKey: string
+  groqApiKey: string
+}
+
+// Shortcut on/off map, keyed by the ids in shared/keybinds.
+export type KeybindMap = Record<string, boolean>
 
 // A topic surfaced from the transcript. `sources` are verbatim quotes from the
 // transcript that justify the node — used to render the click-into description.
@@ -188,5 +205,13 @@ export interface Api {
   }
   suggest: {
     complete(noteId: string, paragraph: string): Promise<string>
+  }
+  settings: {
+    get(): Promise<SettingsKeys>
+    set(keys: SettingsKeys): Promise<void>
+  }
+  keybinds: {
+    get(): Promise<KeybindMap>
+    set(id: string, on: boolean): Promise<KeybindMap>
   }
 }

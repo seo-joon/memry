@@ -377,23 +377,24 @@ export function mountSidePanel(opts: SidePanelOptions = {}): SidePanelHandle {
   }
 
   function show(): void {
-    panel.hidden = false
     app.classList.add('side-open')
+    // Resize twice: once for the opening frame, once after the track finishes
+    // growing, so the graph measures the settled width.
     requestAnimationFrame(() => graph?.resize())
+    setTimeout(() => graph?.resize(), 220)
   }
 
   function hide(): void {
     app.classList.remove('side-open')
-    panel.hidden = true
   }
 
   function toggle(): void {
-    if (panel.hidden) show()
-    else hide()
+    if (isOpen()) hide()
+    else show()
   }
 
   function isOpen(): boolean {
-    return !panel.hidden
+    return app.classList.contains('side-open')
   }
 
   return {

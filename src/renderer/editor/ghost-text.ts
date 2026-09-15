@@ -84,10 +84,16 @@ function getParagraph(state: EditorState, lineNum: number): string {
 export interface GhostTextOptions {
   request: (paragraph: string) => Promise<string>
   debounceMs?: number
+  // Shortcut toggles from Settings. Fetching exists to serve Tab, so a
+  // disabled accept also stops requests.
+  acceptEnabled?: () => boolean
+  dismissEnabled?: () => boolean
 }
 
 export function ghostText(opts: GhostTextOptions): Extension {
   const debounceMs = opts.debounceMs ?? 500
+  const acceptEnabled = opts.acceptEnabled ?? (() => true)
+  const dismissEnabled = opts.dismissEnabled ?? (() => true)
 
   const requester = ViewPlugin.fromClass(
     class {
@@ -103,6 +109,7 @@ export function ghostText(opts: GhostTextOptions): Extension {
       }
 
       async fire(view: EditorView): Promise<void> {
+        if (!acceptEnabled()) return
         const { state } = view
         const pos = state.selection.main.head
         const line = state.doc.lineAt(pos)
@@ -149,9 +156,16 @@ export function ghostText(opts: GhostTextOptions): Extension {
     requester,
     // Tab/Escape only consume the key when a ghost is actually pending — false
     // lets them fall through to indent/normal behavior the rest of the time.
+    // Either can be switched off in Settings, falling through the same way.
     keymap.of([
-      { key: 'Tab', run: acceptGhostText },
-      { key: 'Escape', run: dismissGhostText }
+      {
+        key: 'Tab',
+        run: (view) => (acceptEnabled() ? acceptGhostText(view) : false)
+      },
+      {
+        key: 'Escape',
+        run: (view) => (dismissEnabled() ? dismissGhostText(view) : false)
+      }
     ])
   ]
 }

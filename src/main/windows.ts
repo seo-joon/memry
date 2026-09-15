@@ -1,4 +1,4 @@
-import { BrowserWindow, app, shell, globalShortcut, screen, type Rectangle } from 'electron'
+import { BrowserWindow, app, shell, globalShortcut, screen, Notification, type Rectangle } from 'electron'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { setStickiesVisible } from './stickies'
@@ -15,6 +15,17 @@ export const sharedWebPreferences = {
 }
 
 let overlayWindow: BrowserWindow | null = null
+// Every editor window, so the shortcut can tell when Memry fills the screen.
+const editorWindows = new Set<BrowserWindow>()
+
+// ⌘W is intercepted in main (the default menu would close the window), so its
+// toggle lives here as a plain flag. Off means the keypress falls through to
+// the system default (close window), same as any untaken shortcut.
+let closeTabEnabled = true
+
+export function setCloseTabEnabled(on: boolean): void {
+  closeTabEnabled = on
+}
 
 // Load a renderer HTML entry, dev (vite server) or prod (file), with an optional
 // query string (e.g. "id=abc" for a sticky to learn which note it is). Exported so
@@ -53,6 +64,9 @@ export function createEditorWindow(): BrowserWindow {
     webPreferences: sharedWebPreferences
   })
 
+  editorWindows.add(win)
+  win.on('closed', () => editorWindows.delete(win))
+
   win.once('ready-to-show', () => win.show())
 
   // Surface renderer/preload problems in the main-process terminal (renderer console
@@ -81,6 +95,7 @@ export function createEditorWindow(): BrowserWindow {
     if (input.type !== 'keyDown') return
     const mod = process.platform === 'darwin' ? input.meta : input.control
     if (mod && !input.shift && !input.alt && input.key.toLowerCase() === 'w') {
+      if (!closeTabEnabled) return
       e.preventDefault()
       win.webContents.send(CH.editorCloseTab)
     }
@@ -131,20 +146,17 @@ export function createOverlayWindow(): BrowserWindow {
     backgroundColor: '#ffffff',
     skipTaskbar: true,
     resizable: true,
+    fullscreenable: false,
     show: false,
     webPreferences: sharedWebPreferences
   })
 
-  // Apply float-above + cross-Spaces ONLY while the overlay is visible. Applying these
-  // at creation (even while hidden) can app-wide suppress the macOS auto-hide menu bar
-  // from revealing on cursor-to-top — so we defer them to the show event and clear on hide.
-  win.on('show', () => {
-    win.setAlwaysOnTop(true, 'floating')
-    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-  })
+  // Drop float-above on hide so a hidden window never suppresses the macOS
+  // auto-hide menu bar. The all-workspaces flag is deliberately left alone:
+  // changing Space membership during a hide can pull the user to another
+  // Space, which reads as Memry vanishing.
   win.on('hide', () => {
     win.setAlwaysOnTop(false)
-    win.setVisibleOnAllWorkspaces(false)
   })
 
   let boundsTimer: ReturnType<typeof setTimeout> | null = null
@@ -173,10 +185,20 @@ export function getOverlayWindow(): BrowserWindow | null {
   return overlayWindow
 }
 
-// Make the overlay the key window so ⌘↵ / esc are delivered to its textarea — not
-// the app the user was in when they hit the shortcut. On first ever launch (no saved
-// bounds), drop it near the top-right of the cursor's display; thereafter the saved
-// position is already on the window from createOverlayWindow().
+// Panels cannot float over a full-screen editor Space, so the shortcut says
+// so instead of opening into a broken state.
+export function isEditorFullscreen(): boolean {
+  for (const win of editorWindows) {
+    if (!win.isDestroyed() && win.isFullScreen()) return true
+  }
+  return false
+}
+
+// Show the quick-capture box without touching anything else. The main window
+// stays where it is and the frontmost app keeps its place. The overlay is a
+// non-activating panel, so showInactive() surfaces it without pulling Memry
+// forward from another app and without hiding the editor from inside Memry.
+// Do NOT use show()/focus() here.
 function showOverlay(overlay: BrowserWindow): void {
   if (!loadOverlayBounds()) {
     const cursor = screen.getCursorScreenPoint()
@@ -185,34 +207,57 @@ function showOverlay(overlay: BrowserWindow): void {
     const margin = 16
     overlay.setPosition(workArea.x + workArea.width - w - margin, workArea.y + margin)
   }
-  // The overlay is a type:'panel' BrowserWindow. showInactive() on a panel grants
-  // key status (so the textarea receives keystrokes immediately) WITHOUT activating
-  // the app — that's the only way to surface the overlay without macOS pulling the
-  // main editor window forward. Do NOT call show()/focus() here.
+  // Float above other apps on the current Space. Set BEFORE showing: changing
+  // Space membership after a window is visible can drag the user to another
+  // Space, which reads as Memry closing.
+  overlay.setAlwaysOnTop(true, 'floating')
+  overlay.setVisibleOnAllWorkspaces(true, {
+    visibleOnFullScreen: true,
+    // See the matching note in stickies.ts: without this flag every call
+    // demotes the whole app to an accessory process, which costs Memry the
+    // front. This is the actual cause of the "Memry disappears" bug.
+    skipTransformProcessType: true
+  })
   overlay.showInactive()
-  // The renderer's `window.focus` event doesn't reliably fire on a panel-window
-  // showInactive(), so the textarea wouldn't auto-focus on second+ summon. Poke
-  // the renderer explicitly so the user can type immediately.
+  // The renderer does not reliably get a focus event on showInactive(), so poke
+  // it to put the cursor in the box straight away.
   overlay.webContents.send(CH.overlayFocusInput)
 }
 
-export function registerOverlayToggle(overlay: BrowserWindow): void {
-  // ⌘⇧Space is the only path that toggles stickies alongside the overlay. The
-  // overlay's own ×/Esc/Keep-as-sticky buttons close just the overlay — otherwise
-  // "Keep as sticky" would create a sticky and then hide it (and every sibling sticky)
-  // when the overlay closes.
-  const ok = globalShortcut.register('CommandOrControl+Shift+Space', () => {
-    if (overlay.isVisible()) {
-      overlay.hide()
-      setStickiesVisible(false)
-    } else {
-      showOverlay(overlay)
-      setStickiesVisible(true)
+export function registerOverlayToggle(overlay: BrowserWindow, enabled: boolean): void {
+  // ⌘⇧Space shows or hides the overlay plus every sticky note. It never
+  // touches the main editor window, whichever app is frontmost.
+  if (enabled) setQuickCaptureEnabled(true, overlay)
+}
+
+const QUICK_CAPTURE_ACC = 'CommandOrControl+Shift+Space'
+
+// Switching the global capture off unregisters the hotkey entirely, so an
+// overlapping shortcut in another app stops colliding.
+export function setQuickCaptureEnabled(on: boolean, overlay: BrowserWindow): void {
+  if (on) {
+    if (globalShortcut.isRegistered(QUICK_CAPTURE_ACC)) return
+    const ok = globalShortcut.register(QUICK_CAPTURE_ACC, () => handleOverlayToggle(overlay))
+    if (!ok) {
+      console.warn(
+        '[memry] Failed to register global shortcut CommandOrControl+Shift+Space (likely owned by another app).'
+      )
     }
-  })
-  if (!ok) {
-    console.warn(
-      '[memry] Failed to register global shortcut CommandOrControl+Shift+Space (likely owned by another app).'
-    )
+    return
+  }
+  globalShortcut.unregister(QUICK_CAPTURE_ACC)
+}
+
+function handleOverlayToggle(overlay: BrowserWindow): void {
+  if (isEditorFullscreen()) {
+    new Notification({ title: 'Memry', body: 'Exit full screen to open sticky notes.' }).show()
+    return
+  }
+  if (overlay.isVisible()) {
+    overlay.hide()
+    setStickiesVisible(false)
+  } else {
+    showOverlay(overlay)
+    setStickiesVisible(true)
   }
 }

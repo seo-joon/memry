@@ -5,9 +5,17 @@ import { resolve } from 'node:path'
 import dotenv from 'dotenv'
 import { app, BrowserWindow, Menu, globalShortcut, nativeTheme } from 'electron'
 import { registerMemrySchemePrivileged, handleMemryProtocol } from './protocol'
-import { createEditorWindow, createOverlayWindow, registerOverlayToggle } from './windows'
+import {
+  createEditorWindow,
+  createOverlayWindow,
+  registerOverlayToggle,
+  setCloseTabEnabled
+} from './windows'
 import { registerIpc } from './ipc'
 import { restoreStickies, flushStickies } from './stickies'
+import { loadUserKeys } from './keys'
+import { getKeybinds } from './prefs'
+import { checkForUpdates } from './updater'
 
 // Load env vars BEFORE any service that consumes them. In dev we want the
 // project-root .env (default behaviour — cwd-relative). In a packaged build,
@@ -80,13 +88,19 @@ function buildAppMenu(): Electron.Menu {
   return Menu.buildFromTemplate(template)
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   Menu.setApplicationMenu(buildAppMenu())
+  // Per-Mac keys from Settings (Keychain-encrypted). Anything already in the
+  // environment (dev .env) wins.
+  await loadUserKeys()
   handleMemryProtocol()
   createEditorWindow()
   const overlay = createOverlayWindow()
   registerIpc()
-  registerOverlayToggle(overlay)
+  const keybinds = await getKeybinds()
+  setCloseTabEnabled(keybinds.closeTab)
+  registerOverlayToggle(overlay, keybinds.quickCapture)
+  checkForUpdates()
   void restoreStickies()
 
   // macOS: recreate the editor window when the dock icon is clicked and no windows are open.

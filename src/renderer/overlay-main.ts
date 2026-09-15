@@ -4,6 +4,9 @@ const input = document.getElementById('overlay-input') as HTMLTextAreaElement
 const stickyBtn = document.getElementById('overlay-sticky') as HTMLButtonElement
 const saveStickyBtn = document.getElementById('overlay-save-sticky') as HTMLButtonElement
 const closeBtn = document.getElementById('overlay-close') as HTMLButtonElement
+const hintEl = document.getElementById('overlay-hint') as HTMLElement
+const hintDefault = hintEl.innerHTML
+let confirming = false
 
 // Grab focus whenever the overlay appears so the user can type immediately.
 // window 'focus' alone isn't reliable for a type:'panel' showInactive() — main
@@ -15,12 +18,28 @@ focusInput()
 window.addEventListener('focus', focusInput)
 window.api.overlay.onFocusInput(focusInput)
 
-// Save the thought to the Quick Notes folder, then hide.
+// Save the thought to the Quick Notes folder. Main hides the box on save, so
+// there is no toggle afterwards (toggling a hidden box would reopen it).
+// Shows a short confirmation first so saving never feels silent.
 async function save(): Promise<void> {
+  if (confirming) return
   const text = input.value.trim()
-  if (text) await window.api.overlay.save(text)
+  if (!text) {
+    window.api.overlay.toggle()
+    return
+  }
+  confirming = true
   input.value = ''
-  window.api.overlay.toggle()
+  input.disabled = true
+  hintEl.textContent = 'Saved to Quick Notes'
+  setTimeout(() => {
+    void window.api.overlay.save(text).finally(() => {
+      confirming = false
+      input.disabled = false
+      input.value = ''
+      hintEl.innerHTML = hintDefault
+    })
+  }, 650)
 }
 
 // Spawn an empty sticky note alongside the overlay. Quick-note text is left

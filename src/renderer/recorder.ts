@@ -24,6 +24,8 @@ export class Recorder {
   private recorder: MediaRecorder | null = null
   private cycleTimer: ReturnType<typeof setTimeout> | null = null
   private running = false
+  private audioCtx: AudioContext | null = null
+  private analyser: AnalyserNode | null = null
 
   constructor(
     mode: ListenMode,
@@ -39,7 +41,28 @@ export class Recorder {
     if (this.running) return
     this.stream = await this.acquireStream()
     this.running = true
+    this.setupMeter()
     this.beginCycle()
+  }
+
+  // Current input loudness, 0 (silent) to ~1 (loud). Used for the level meter.
+  // Returns 0 when metering is unavailable. Never throws.
+  level(): number {
+    if (!this.analyser) return 0
+    try {
+      const data = new Uint8Array(this.analyser.fftSize)
+      this.analyser.getByteTimeDomainData(data)
+      let sum = 0
+      for (let i = 0; i < data.length; i++) {
+        const v = (data[i] - 128) / 128
+        sum += v * v
+      }
+      // Speech at normal volume lands around 0.05 RMS, so boost it onto a
+      // readable scale. The caller clamps to 1.
+      return Math.sqrt(sum / data.length) * 6
+    } catch {
+      return 0
+    }
   }
 
   stop(): void {
@@ -56,6 +79,30 @@ export class Recorder {
     this.recorder = null
     this.stream?.getTracks().forEach((t) => t.stop())
     this.stream = null
+    this.analyser = null
+    if (this.audioCtx) {
+      const ctx = this.audioCtx
+      this.audioCtx = null
+      void ctx.close().catch(() => undefined)
+    }
+  }
+
+  // Passive loudness tap for the level meter. A failure here must never break
+  // recording, so everything is guarded and level() degrades to 0.
+  private setupMeter(): void {
+    try {
+      const Ctx =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      if (!Ctx || !this.stream) return
+      this.audioCtx = new Ctx()
+      const src = this.audioCtx.createMediaStreamSource(this.stream)
+      this.analyser = this.audioCtx.createAnalyser()
+      this.analyser.fftSize = 256
+      src.connect(this.analyser)
+    } catch {
+      this.analyser = null
+    }
   }
 
   // One self-contained recording cycle: a fresh MediaRecorder produces exactly one

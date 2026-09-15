@@ -252,6 +252,8 @@ export function mountSidebar(opts: SidebarOptions): Sidebar {
   function makeName(label: string, path: string, isNote: boolean): HTMLElement {
     const name = el('span', 'tree-name')
     name.textContent = label
+    // Full name on hover for truncated labels (long quick-note timestamps).
+    name.title = label
     name.dataset.path = path
     name.dataset.note = String(isNote)
     name.dataset.rename = path

@@ -12,3 +12,8 @@ export function getOpenAI(): OpenAI | null {
   client = new OpenAI()
   return client
 }
+
+// Drop the cached client so a key saved in Settings takes effect at once.
+export function resetOpenAI(): void {
+  client = null
+}

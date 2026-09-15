@@ -18,8 +18,19 @@ const MODES: { value: ListenMode; label: string }[] = [
 ]
 
 const LIVE_PREF_KEY = 'memry.showLiveTranscript'
+const MODE_PREF_KEY = 'memry.listenMode'
 // Match the .transcript-line exit animation in style.css.
 const LINE_EXIT_MS = 280
+
+function loadMode(): ListenMode {
+  const saved = localStorage.getItem(MODE_PREF_KEY)
+  return saved === 'system' || saved === 'recording' || saved === 'microphone' ? saved : 'microphone'
+}
+
+function formatElapsed(ms: number): string {
+  const s = Math.floor(ms / 1000)
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
 
 export function mountTranscriptionUI(opts: {
   popoverEl: HTMLElement
@@ -27,21 +38,30 @@ export function mountTranscriptionUI(opts: {
   transcriptEl: HTMLElement
   toggleEl: HTMLButtonElement
   getNoteId: () => string
-  onTranscriptReady?: (transcript: string) => void
-  // Fired the instant the user clicks Stop — BEFORE the cleanup roundtrip. Used
+  // The note the recording belongs to is pinned at Start and handed back with
+  // the result, so switching tabs mid-recording cannot file it elsewhere.
+  onTranscriptReady?: (noteId: string, transcript: string) => void
+  // Fired the instant the user clicks Stop, BEFORE the cleanup roundtrip. Used
   // to surface immediate "we're working on it" feedback (analysis loading bar)
-  // so the user doesn't sit with a dead UI for a few seconds.
-  onRecordingStopped?: () => void
+  // so the user doesn't sit with a dead UI for a few seconds. Carries the same
+  // pinned note id as onTranscriptReady.
+  onRecordingStopped?: (noteId: string) => void
 }): TranscriptionUI {
   const { popoverEl, containerEl, transcriptEl, toggleEl, getNoteId, onTranscriptReady, onRecordingStopped } = opts
 
-  let mode: ListenMode = 'microphone'
+  let mode: ListenMode = loadMode()
   let recorder: Recorder | null = null
   let unsub: (() => void) | null = null
   let sessionId: SessionId | null = null
   let recording = false
   let showLive = localStorage.getItem(LIVE_PREF_KEY) !== 'false'
   let currentLine: HTMLElement | null = null
+  // The note the active recording belongs to, pinned the moment it starts.
+  let startedNoteId = ''
+  // Elapsed-time pill next to the record button + input level meter.
+  let elapsedIv: ReturnType<typeof setInterval> | null = null
+  let startedAt = 0
+  let meterRaf = 0
 
   // --- Popover DOM ---
   const startBtn = document.createElement('button')
@@ -76,11 +96,27 @@ export function mountTranscriptionUI(opts: {
   const status = document.createElement('div')
   status.className = 'record-popover-status'
 
+  // Input level meter: a thin bar that fills with the live mic level while
+  // recording, so a dead device shows up at once instead of after a chunk.
+  const meterFill = document.createElement('div')
+  meterFill.className = 'record-meter-fill'
+  const meter = document.createElement('div')
+  meter.className = 'record-meter'
+  meter.hidden = true
+  meter.appendChild(meterFill)
+
   const banner = document.createElement('div')
   banner.className = 'record-popover-banner'
   banner.hidden = true
 
-  popoverEl.append(startBtn, modeRow, liveRow, status, banner)
+  popoverEl.append(startBtn, modeRow, liveRow, meter, status, banner)
+
+  // Elapsed-time pill beside the record button. The topbar is always visible,
+  // so this is the recording indicator on every tab.
+  const elapsedEl = document.createElement('span')
+  elapsedEl.className = 'record-elapsed'
+  elapsedEl.hidden = true
+  toggleEl.parentElement?.appendChild(elapsedEl)
 
   // --- helpers ---
   function setStatus(text: string): void {
@@ -114,10 +150,49 @@ export function mountTranscriptionUI(opts: {
     startBtn.textContent = recording ? 'Stop recording' : 'Start recording'
     startBtn.classList.toggle('is-recording', recording)
     modeSelect.disabled = recording
+    meter.hidden = !recording
+    if (!recording) {
+      meterFill.style.width = '0%'
+      elapsedEl.hidden = true
+    }
     // Ticker bar lives only while we're actively recording AND user wants it.
     const shouldShow = recording && showLive
     containerEl.hidden = !shouldShow
     if (!shouldShow) clearLine()
+  }
+
+  function startElapsed(): void {
+    startedAt = Date.now()
+    elapsedEl.textContent = '0:00'
+    elapsedEl.hidden = false
+    if (elapsedIv) clearInterval(elapsedIv)
+    elapsedIv = setInterval(() => {
+      elapsedEl.textContent = formatElapsed(Date.now() - startedAt)
+    }, 1000)
+  }
+
+  function stopElapsed(): void {
+    if (elapsedIv) {
+      clearInterval(elapsedIv)
+      elapsedIv = null
+    }
+    elapsedEl.hidden = true
+  }
+
+  function startMeter(): void {
+    cancelAnimationFrame(meterRaf)
+    const tick = (): void => {
+      if (!recorder) return
+      meterFill.style.width = `${Math.round(Math.min(1, recorder.level()) * 100)}%`
+      meterRaf = requestAnimationFrame(tick)
+    }
+    meterRaf = requestAnimationFrame(tick)
+  }
+
+  function stopMeter(): void {
+    cancelAnimationFrame(meterRaf)
+    meterRaf = 0
+    meterFill.style.width = '0%'
   }
 
   // --- popover open/close ---
@@ -164,13 +239,19 @@ export function mountTranscriptionUI(opts: {
 
   async function start(): Promise<void> {
     if (recording) return
+    const noteId = getNoteId()
+    if (!noteId) {
+      setStatus('Open a note first, then record into it.')
+      return
+    }
     setStatus('Preparing…')
     if (!(await ensurePermission())) {
       setStatus('')
       return
     }
     try {
-      sessionId = await window.api.transcription.start(getNoteId())
+      startedNoteId = noteId
+      sessionId = await window.api.transcription.start(noteId)
       const sid = sessionId
       unsub = window.api.transcription.onAppend((p) => {
         if (p.sessionId === sid && p.delta) showLine(p.delta)
@@ -181,6 +262,8 @@ export function mountTranscriptionUI(opts: {
       reflectRecording()
       await recorder.start()
       setStatus('Listening…')
+      startElapsed()
+      startMeter()
       // Leave the popover open so the user can see recording started; they can
       // dismiss it themselves (click-outside or Esc).
     } catch (err) {
@@ -197,12 +280,15 @@ export function mountTranscriptionUI(opts: {
   async function stop(): Promise<void> {
     if (!recording || !sessionId) return
     const sid = sessionId
+    const noteId = startedNoteId
     // Fire BEFORE any await so the renderer can paint loading feedback in the
     // same frame as the click. The cleanup call below takes a few seconds.
-    onRecordingStopped?.()
+    onRecordingStopped?.(noteId)
     setStatus('Finishing…')
     recorder?.stop()
     recorder = null
+    stopMeter()
+    stopElapsed()
     reflectRecording()
     let final = ''
     try {
@@ -211,14 +297,17 @@ export function mountTranscriptionUI(opts: {
       unsub?.()
       unsub = null
       sessionId = null
+      startedNoteId = ''
       setStatus('')
     }
-    onTranscriptReady?.(final)
+    onTranscriptReady?.(noteId, final)
   }
 
   async function cleanupSession(): Promise<void> {
     recorder?.stop()
     recorder = null
+    stopMeter()
+    stopElapsed()
     unsub?.()
     unsub = null
     if (sessionId) {
@@ -265,6 +354,7 @@ export function mountTranscriptionUI(opts: {
 
   modeSelect.addEventListener('change', () => {
     mode = modeSelect.value as ListenMode
+    localStorage.setItem(MODE_PREF_KEY, mode)
     hideBanner()
   })
 
@@ -280,9 +370,12 @@ export function mountTranscriptionUI(opts: {
     destroy() {
       recorder?.stop()
       recorder = null
+      stopMeter()
+      stopElapsed()
       unsub?.()
       unsub = null
       sessionId = null
+      elapsedEl.remove()
       document.removeEventListener('mousedown', onDocClick)
       document.removeEventListener('keydown', onDocKey)
       popoverEl.replaceChildren()

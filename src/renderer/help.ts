@@ -13,92 +13,103 @@ export function shouldShowHelpOnLaunch(): boolean {
 
 const CONTENT_HTML = `
   <h2>Memry</h2>
-  <p class="help-lede">A markdown notes app that listens. Record a meeting and it transcribes, cleans up, and summarizes — straight into your note.</p>
+  <p class="help-lede">A notes app that listens. Record a meeting or a lecture and Memry writes down what was said, tidies it up, and summarises it for you.</p>
 
-  <h3>How a recording works</h3>
+  <h3>Recording</h3>
   <ol>
-    <li>Click the red dot at the top right. Pick an <em>Input</em> — Microphone, System audio, or Recording device. Toggle <em>Show live transcription</em> if you want the ticker.</li>
-    <li>Hit <strong>Start</strong>. While recording, a ticker scrolls under your tabs (if enabled) as Groq Whisper transcribes each chunk live.</li>
-    <li>Hit <strong>Stop</strong>. The transcript is cleaned up (one <kbd>gpt-4o-mini</kbd> pass to fix misheard words and rejoin fragments), stored alongside its analysis entry, and sent for topic extraction. <strong>It does not get pasted into your note's markdown</strong> — your note stays clean.</li>
-    <li>The side panel (<kbd>⌘E</kbd>) lights up with a summary, a Cytoscape topic graph, and a <em>Transcript</em> section holding the source text. <strong>Every recording becomes its own entry</strong> in the history dropdown, so one note can hold many lectures.</li>
+    <li>Click the red dot at the top right.</li>
+    <li>Choose what to listen to. Pick Microphone for people in the room with you, System audio for calls and videos playing on your Mac, or Recording device if you have separate audio equipment.</li>
+    <li>Turn on Show live transcription if you want to watch the words appear as you go.</li>
+    <li>Press Start.</li>
+    <li>Press Stop when you are done. Memry fixes misheard words, joins up broken sentences, and works out the main topics.</li>
   </ol>
+  <p>Your note stays exactly as you wrote it. The written record and the summary appear in the side panel.</p>
+  <p>Each recording is kept on its own, so one note can hold a whole term of lectures. Use the list at the top of the side panel to move between them.</p>
 
   <h3>Tabs</h3>
   <table class="help-keys">
     <tr><td><kbd>⌘N</kbd></td><td>New note in a new tab</td></tr>
-    <tr><td><kbd>⌘T</kbd></td><td>Empty new tab (pick <em>New note</em> or <em>Open existing…</em>)</td></tr>
-    <tr><td><kbd>⌘⇧T</kbd></td><td>Reopen the last closed tab (LIFO stack, up to 20)</td></tr>
-    <tr><td><kbd>⌘W</kbd></td><td>Close the active tab</td></tr>
-    <tr><td>Drag tab</td><td>Reorder</td></tr>
-    <tr><td>Drag <kbd>⋮⋮</kbd></td><td>From the side panel's Graph section into the tab bar to spawn a graph tab</td></tr>
+    <tr><td><kbd>⌘T</kbd></td><td>New empty tab</td></tr>
+    <tr><td><kbd>⌘⇧T</kbd></td><td>Bring back a tab you closed. Press again for earlier ones</td></tr>
+    <tr><td><kbd>⌘W</kbd></td><td>Close this tab</td></tr>
+    <tr><td><kbd>⌘O</kbd></td><td>Find a note and open it</td></tr>
   </table>
+  <p>Drag a tab sideways to change its order.</p>
+  <p>Every shortcut on this page can be switched off in Settings.</p>
 
-  <h3>Editor</h3>
-  <p>Markdown renders in place (Obsidian-style live preview). Put your cursor inside a construct to edit the raw source; move away and it re-renders.</p>
+  <h3>Writing</h3>
+  <p>Formatting shows as you type. Click inside formatted text to see the plain version, then click away and it changes back.</p>
   <ul>
-    <li><strong>Format:</strong> <code>**bold**</code>, <code>*italic*</code>, <code>\`code\`</code>, <code># Heading</code>, <code>&gt; quote</code>, <code>- list</code></li>
-    <li><strong>Links:</strong> <code>[text](url)</code> and Obsidian <code>[[Wikilinks]]</code> (with <code>[[target|alias]]</code> too)</li>
-    <li><strong>Math:</strong> <code>$inline$</code> and <code>$$block$$</code> via KaTeX</li>
-    <li><strong>Images:</strong> paste from clipboard or drag from Finder — saved at the vault root, inserted as standard markdown</li>
-    <li><strong>Resize images:</strong> hover and drag the blue corner handle, or type <code>|300</code> in the alt text — <code>![alt|300](file.png)</code> (Obsidian's pipe convention; <code>|300x200</code> also works)</li>
+    <li><strong>Bold and italic:</strong> <code>**bold**</code> and <code>*italic*</code></li>
+    <li><strong>Headings:</strong> start the line with <code>#</code></li>
+    <li><strong>Lists:</strong> start the line with <code>-</code></li>
+    <li><strong>Quotes:</strong> start the line with <code>&gt;</code></li>
+    <li><strong>Links:</strong> <code>[what to show](the address)</code></li>
+    <li><strong>Links to your other notes:</strong> <code>[[Note name]]</code>, or <code>[[Note name|what to show]]</code></li>
+    <li><strong>Maths:</strong> <code>$x^2$</code> in the middle of a sentence, or <code>$$x^2$$</code> on its own line</li>
+    <li><strong>Pictures:</strong> paste one in, or drag one in from a folder</li>
+    <li><strong>Picture size:</strong> point at a picture and drag the blue corner, or set the width like this: <code>![picture|300](photo.png)</code></li>
   </ul>
   <table class="help-keys">
-    <tr><td><kbd>Tab</kbd></td><td>Accept the ghost-text suggestion</td></tr>
-    <tr><td><kbd>Esc</kbd></td><td>Dismiss the ghost-text suggestion</td></tr>
-    <tr><td><kbd>⌘Z</kbd> / <kbd>⌘⇧Z</kbd></td><td>Undo / redo</td></tr>
+    <tr><td><kbd>⌘B</kbd></td><td>Bold</td></tr>
+    <tr><td><kbd>⌘I</kbd></td><td>Italic</td></tr>
+    <tr><td><kbd>⌘K</kbd></td><td>Link</td></tr>
+    <tr><td><kbd>⌘⇧C</kbd></td><td>Inline code</td></tr>
+    <tr><td><kbd>⌘⇧S</kbd></td><td>Strikethrough</td></tr>
+    <tr><td><kbd>Tab</kbd></td><td>Accept the grey suggestion</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>Dismiss the grey suggestion</td></tr>
+    <tr><td><kbd>⌘Z</kbd></td><td>Undo</td></tr>
+    <tr><td><kbd>⌘⇧Z</kbd></td><td>Redo</td></tr>
+    <tr><td><kbd>⌘/</kbd></td><td>Open this help</td></tr>
   </table>
 
-  <h3>Side panel <kbd>⌘E</kbd></h3>
+  <h3>Side panel</h3>
+  <table class="help-keys">
+    <tr><td><kbd>⌘E</kbd></td><td>Show or hide the side panel</td></tr>
+  </table>
   <ul>
-    <li><strong>History dropdown</strong> — one entry per recording, newest first. Labels are <kbd>DD/MM/YY HH:MM</kbd>; hover to preview the summary.</li>
-    <li><kbd>↻</kbd> re-analyzes the active entry on its stored source text — useful after model changes.</li>
-    <li><kbd>🗑</kbd> deletes the active entry (and closes any graph tabs that pinned it).</li>
-    <li>Each section header has a <kbd>▾</kbd> chevron — click to collapse. State persists.</li>
-    <li><strong>Graph section:</strong> <kbd>↗</kbd> opens the graph in its own tab; <kbd>⋮⋮</kbd> drags it out. Click any node to see its supporting quotes from the transcript.</li>
-    <li>On a graph tab, click nodes for the same inline detail card — no side panel needed.</li>
-    <li><strong>Transcript section</strong> (collapsed by default) — the cleaned-up source text for the active entry. Selectable for copy/paste.</li>
+    <li>The list at the top shows your recordings, newest first. Point at one to see what it covers.</li>
+    <li><strong>Summary</strong> gives the main points in a few sentences.</li>
+    <li><strong>Writing about</strong> suggests topics that fit the paragraph your cursor is in.</li>
+    <li><strong>Graph</strong> draws the topics as a map. Click a topic to see the exact words behind it. The arrow button opens the map in its own tab.</li>
+    <li><strong>Transcript</strong> holds the full written record. It starts folded away.</li>
+    <li>Click the small arrow on any heading to fold that part away. Memry remembers your choice.</li>
+    <li>The refresh button builds the summary again from the same recording.</li>
+    <li>The bin button removes the recording you are looking at.</li>
   </ul>
 
-  <h3>Sidebar — folder tree</h3>
+  <h3>Notes list</h3>
   <ul>
-    <li>Click a note to open it in the active tab.</li>
-    <li><strong>Multi-select:</strong> <kbd>⌘</kbd>-click toggles individual items in/out of the selection; <kbd>⇧</kbd>-click extends the selection through a range. Click any empty area or any unmodified row to clear.</li>
-    <li><strong>Bulk actions:</strong> right-click on a selected row → <em>Delete N items</em>. Or drag any selected row to move the whole set into a folder at once.</li>
-    <li><strong>Double-click</strong> a note or folder name to rename — <kbd>Enter</kbd> commits, <kbd>Esc</kbd> cancels.</li>
-    <li><strong>Drag</strong> notes between folders. Folders can be moved too (can't drop into themselves or their own descendants).</li>
-    <li><strong>Right-click</strong> for <em>New note · New folder · Rename · Delete</em>.</li>
-    <li><kbd>Quick Notes/</kbd> always exists at the root — that's where overlay captures land.</li>
+    <li>Click a note to open it.</li>
+    <li><strong>Pick several at once:</strong> hold <kbd>⌘</kbd> and click to add notes one by one, or hold <kbd>⇧</kbd> and click to take everything in between. Click an empty spot to start over.</li>
+    <li><strong>Rename:</strong> double click the name. Press <kbd>↵</kbd> to keep the new name, or <kbd>Esc</kbd> to cancel.</li>
+    <li><strong>Move:</strong> drag notes into folders. You can drag whole folders too.</li>
+    <li><strong>Right click</strong> for new note, new folder, rename, and delete. Right click a group you picked to remove them together.</li>
   </ul>
 
-  <h3>Quick capture <kbd>⌘⇧Space</kbd></h3>
-  <p>A frameless floating window for jotting something without leaving what you're doing. Always-on-top, doesn't pull the main app forward.</p>
+  <h3>Sticky notes</h3>
+  <p>Small notes that float above your other apps, for jotting something down in the moment. They stay where you put them and are still there when you reopen Memry.</p>
   <table class="help-keys">
-    <tr><td><kbd>⌘↵</kbd></td><td>Save to <kbd>Quick Notes/</kbd>, hide</td></tr>
-    <tr><td><kbd>⌘⇧↵</kbd></td><td>Save as a sticky (input clears, window stays)</td></tr>
-    <tr><td><kbd>Esc</kbd></td><td>Hide everything — overlay + every sticky — without deleting anything</td></tr>
-    <tr><td><kbd>+</kbd></td><td>Spawn an empty sticky alongside the overlay</td></tr>
+    <tr><td><kbd>⌘⇧Space</kbd></td><td>Show or hide sticky notes. Works wherever you are</td></tr>
+    <tr><td><kbd>⌘↵</kbd></td><td>Save what you typed as a note, then close</td></tr>
+    <tr><td><kbd>⌘↵ in a sticky note</kbd></td><td>Close that sticky note</td></tr>
+    <tr><td><kbd>⌘⇧↵</kbd></td><td>Turn what you typed into a sticky note and keep typing</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>Hide everything. Nothing is removed</td></tr>
   </table>
+  <p>The + button adds another sticky note. The cross button closes that sticky note.</p>
+  <p>Sticky notes cannot open while Memry fills the screen. Press <kbd>Ctrl⌘F</kbd> to leave full screen first.</p>
+  <p>Notes you save with <kbd>⌘↵</kbd> go into a folder called Quick Notes.</p>
 
-  <h3>Stickies</h3>
-  <p>Plain-text floating notes (markdown rendered inline, same editor as the main app). Always-on-top, persisted across restarts in <kbd>userData/stickies.json</kbd>.</p>
-  <table class="help-keys">
-    <tr><td><kbd>⌘↵</kbd></td><td>Close the active sticky</td></tr>
-    <tr><td><kbd>Esc</kbd></td><td>Hide all stickies + the overlay (text preserved)</td></tr>
-    <tr><td><kbd>+</kbd></td><td>Spawn another sticky next to this one</td></tr>
-    <tr><td><kbd>×</kbd></td><td>Close this sticky</td></tr>
-  </table>
+  <h3>Where your notes live</h3>
+  <p>In <kbd>Documents/Memry</kbd>, as ordinary text files. Copy them or open them in another app whenever you like.</p>
 
-  <h3>Vault</h3>
-  <p>Notes live under <kbd>~/Documents/Memry</kbd> by default as plain <kbd>.md</kbd> files — your data is portable and Obsidian-compatible. Each note's analysis history is stored separately in a hidden <kbd>.memry/&lt;noteId&gt;.analysis.json</kbd> sidecar so the markdown stays clean.</p>
-
-  <h3>System shortcuts</h3>
+  <h3>Memry app</h3>
   <table class="help-keys">
     <tr><td><kbd>⌘Q</kbd></td><td>Quit</td></tr>
-    <tr><td><kbd>⌘R</kbd></td><td>Reload renderer</td></tr>
-    <tr><td><kbd>⌘⇧R</kbd></td><td>Hard reload</td></tr>
-    <tr><td><kbd>⌘⌥I</kbd></td><td>Toggle DevTools</td></tr>
-    <tr><td><kbd>Ctrl⌘F</kbd></td><td>Fullscreen</td></tr>
-    <tr><td><kbd>⌘M</kbd></td><td>Minimize</td></tr>
+    <tr><td><kbd>⌘M</kbd></td><td>Minimise</td></tr>
+    <tr><td><kbd>⌘H</kbd></td><td>Hide Memry</td></tr>
+    <tr><td><kbd>⌘R</kbd></td><td>Reload if something looks stuck</td></tr>
+    <tr><td><kbd>Ctrl⌘F</kbd></td><td>Fill the screen</td></tr>
   </table>
 
 `
@@ -115,6 +126,7 @@ export interface HelpHandle {
   open(): void
   toggle(): void
   close(): void
+  markSeen(): void
 }
 
 export function mountHelp(): HelpHandle {
@@ -147,6 +159,12 @@ export function mountHelp(): HelpHandle {
     if (modal.hidden) open()
     else close()
   }
+  // First-launch onboarding calls this right after auto-opening, so later
+  // launches stay quiet. Also ticks the checkbox to match.
+  const markSeen = (): void => {
+    localStorage.setItem(HIDE_ON_LAUNCH_KEY, 'true')
+    if (hideOnLaunchEl) hideOnLaunchEl.checked = true
+  }
 
   modal.addEventListener('click', (e) => {
     const t = e.target as HTMLElement | null
@@ -161,8 +179,8 @@ export function mountHelp(): HelpHandle {
     })
   }
 
-  // Esc closes — only when the modal is the front-of-mind dismissal target so we
-  // don't fight other Esc consumers (popovers, ghost-text) when the modal is hidden.
+  // Esc closes, but only when the modal is open, so it never fights other Esc
+  // uses (popovers, ghost text) while hidden.
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !modal.hidden) {
       e.preventDefault()
@@ -171,5 +189,5 @@ export function mountHelp(): HelpHandle {
     }
   })
 
-  return { open, toggle, close }
+  return { open, toggle, close, markSeen }
 }

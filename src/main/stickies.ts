@@ -93,6 +93,7 @@ function spawnWindow(id: string, savedBounds?: Bounds, focus = false): BrowserWi
     type: 'panel',
     frame: false,
     resizable: true,
+    fullscreenable: false,
     show: false,
     title: 'Sticky',
     // Match the renderer's actual body color (--sticky = #ffffff). If these mismatch
@@ -103,31 +104,39 @@ function spawnWindow(id: string, savedBounds?: Bounds, focus = false): BrowserWi
     webPreferences: sharedWebPreferences
   })
 
-  // Apply float-above + cross-Spaces ONLY while the sticky is visible — even hidden
-  // alwaysOnTop windows can app-wide suppress the macOS auto-hide menu bar from
-  // revealing on cursor-to-top.
-  win.on('show', () => {
-    win.setAlwaysOnTop(true, 'floating')
-    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-  })
+  // Drop float-above on hide so a hidden window never suppresses the macOS
+  // auto-hide menu bar. The all-workspaces flag is deliberately left alone:
+  // changing Space membership during a hide can pull the user to another Space.
   win.on('hide', () => {
     win.setAlwaysOnTop(false)
-    win.setVisibleOnAllWorkspaces(false)
   })
 
   win.once('ready-to-show', () => {
     if (!stickiesShouldBeVisible) return
+    // Float on the current Space. Set before showing so macOS does not move
+    // the user to another Space to reveal the window.
+    win.setAlwaysOnTop(true, 'floating')
+    win.setVisibleOnAllWorkspaces(true, {
+      visibleOnFullScreen: true,
+      // Without this, Electron transforms the process type between
+      // ForegroundApplication and UIElementApplication on every call. An
+      // accessory app cannot be frontmost, so macOS hands the front to another
+      // app and Memry appears to vanish. The transform is asynchronous, which is
+      // why the app still reads as active on the very next line and only flips a
+      // few tens of milliseconds later. Electron's own docs: "this will hide the
+      // window and dock for a short time every time it is called."
+      skipTransformProcessType: true
+    })
     if (!focus) {
       win.showInactive()
       return
     }
     // The overlay and sibling stickies all sit at alwaysOnTop level 'floating'.
-    // Within one level, OS z-order doesn't reliably promote a freshly-shown window
-    // above an actively-focused one (the overlay just had the user's click). So
-    // we bump this new sticky to a strictly higher level ('pop-up-menu') for its
-    // debut, then drop back to 'floating' on first blur so the user can cover it
-    // again like any other sticky.
-    win.show()
+    // Within one level, a freshly shown window does not reliably land above the
+    // one that just had the click, so bump the new sticky a level higher for its
+    // debut, then drop back on first blur. showInactive keeps the main window
+    // and the previous app exactly where they were.
+    win.showInactive()
     win.setAlwaysOnTop(true, 'pop-up-menu')
     win.moveTop()
     win.focus()
@@ -203,8 +212,26 @@ export function setStickiesVisible(visible: boolean): void {
   stickiesShouldBeVisible = visible
   for (const win of windows.values()) {
     if (win.isDestroyed()) continue
-    if (visible && !win.isVisible()) win.showInactive()
-    else if (!visible && win.isVisible()) win.hide()
+    if (visible && !win.isVisible()) {
+      // Set BEFORE showing so the window lands on the current Space instead of
+      // pulling the user to the Space where the main window sits. showInactive
+      // never activates Memry and never hides anything else.
+      win.setAlwaysOnTop(true, 'floating')
+      win.setVisibleOnAllWorkspaces(true, {
+        visibleOnFullScreen: true,
+        // Without this, Electron transforms the process type between
+        // ForegroundApplication and UIElementApplication on every call. An
+        // accessory app cannot be frontmost, so macOS hands the front to another
+        // app and Memry appears to vanish. The transform is asynchronous, which is
+        // why the app still reads as active on the very next line and only flips a
+        // few tens of milliseconds later. Electron's own docs: "this will hide the
+        // window and dock for a short time every time it is called."
+        skipTransformProcessType: true
+      })
+      win.showInactive()
+    } else if (!visible && win.isVisible()) {
+      win.hide()
+    }
   }
 }
 

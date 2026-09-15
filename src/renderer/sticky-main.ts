@@ -44,5 +44,26 @@ async function load(): Promise<void> {
 }
 void load()
 
+// Usual formatting keys, same as the main editor. Panel-local, so always on.
+document.addEventListener('keydown', (e) => {
+  if (!(e.metaKey || e.ctrlKey) || e.altKey || !editor.view.hasFocus) return
+  const key = e.key.toLowerCase()
+  const wrap: [string, string?] | null =
+    !e.shiftKey && key === 'b'
+      ? ['**']
+      : !e.shiftKey && key === 'i'
+        ? ['*']
+        : !e.shiftKey && key === 'k'
+          ? ['[', '](url)']
+          : e.shiftKey && key === 'c'
+            ? ['`']
+            : e.shiftKey && key === 's'
+              ? ['~~']
+              : null
+  if (!wrap) return
+  e.preventDefault()
+  editor.wrapSelection(wrap[0], wrap[1])
+})
+
 newBtn.addEventListener('click', () => void window.api.stickies.create())
 closeBtn.addEventListener('click', () => window.api.stickies.close(id))

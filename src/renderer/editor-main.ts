@@ -6,6 +6,8 @@ import { mountTranscriptionUI } from './transcription-ui'
 import { mountSidePanel, GRAPH_DRAG_MIME } from './sidepanel'
 import { mountGraph, type GraphHandle } from './graph'
 import { mountHelp, shouldShowHelpOnLaunch } from './help'
+import { mountSettings } from './settings'
+import { KEYBINDS } from '../shared/keybinds'
 
 const sidebarEl = document.getElementById('sidebar') as HTMLElement
 const tabsEl = document.getElementById('tabs') as HTMLElement
@@ -15,6 +17,7 @@ const transcriptEl = document.getElementById('transcript') as HTMLElement
 const recordBtn = document.getElementById('record-btn') as HTMLButtonElement
 const recordPopoverEl = document.getElementById('record-popover') as HTMLElement
 const helpBtn = document.getElementById('help-btn') as HTMLButtonElement
+const settingsBtn = document.getElementById('settings-btn') as HTMLButtonElement
 const sidebarExpandBtn = document.getElementById('sidebar-expand-btn') as HTMLButtonElement
 sidebarExpandBtn.addEventListener('click', () => {
   sidebarEl.classList.remove('collapsed')
@@ -50,7 +53,7 @@ const panelContextNoteId = (): string | null => {
 
 // LIFO stack for ⌘⇧T (reopen). Only real note tabs are worth restoring.
 const closedStack: string[] = []
-const CLOSED_STACK_MAX = 20
+const CLOSED_STACK_MAX = 100
 
 let saveTimer: ReturnType<typeof setTimeout> | undefined
 let pendingContent = ''
@@ -79,6 +82,17 @@ function scheduleSave(md: string): void {
   }, 400)
 }
 
+// Shortcut toggles from Settings. Defaults apply until the stored map loads;
+// the settings panel broadcasts changes on the window for a live update.
+const kb: Record<string, boolean> = Object.fromEntries(KEYBINDS.map((k) => [k.id, k.def]))
+void window.api.keybinds.get().then(
+  (stored) => Object.assign(kb, stored),
+  () => undefined
+)
+window.addEventListener('memry:keybinds', (e) => {
+  Object.assign(kb, (e as CustomEvent<Record<string, boolean>>).detail)
+})
+
 const editor = createEditor(editorEl, {
   onChange: (doc) => {
     if (activeId()) scheduleSave(doc)
@@ -91,7 +105,9 @@ const editor = createEditor(editorEl, {
       const id = activeId()
       if (!id) return ''
       return window.api.suggest.complete(id, paragraph)
-    }
+    },
+    acceptEnabled: () => kb.ghostAccept,
+    dismissEnabled: () => kb.ghostDismiss
   },
   imagePaste: {
     writeAsset: (filename, base64) => window.api.vault.writeAsset(filename, base64)
@@ -326,6 +342,18 @@ async function openInActiveTab(id: string): Promise<void> {
   renderTabs()
 }
 
+// Bring the recorded note on screen so the stop press always lands somewhere
+// visible: switch to its tab if open, otherwise open it fresh. Never replaces
+// the tab the user is looking at.
+async function focusNoteTab(noteId: string): Promise<void> {
+  const idx = tabs.findIndex((t) => t.kind === 'note' && t.noteId === noteId)
+  if (idx !== -1) {
+    if (idx !== activeTabIdx) await switchTab(idx)
+    return
+  }
+  await openInNewTab(noteId)
+}
+
 async function openInNewTab(id: string): Promise<void> {
   await flushActive()
   tabs.push({ kind: 'note', noteId: id })
@@ -488,8 +516,10 @@ async function onItemDeleted(path: string): Promise<void> {
 // Side panel + loading bar are turned on by onRecordingStopped (fired the moment
 // the user clicks Stop) — this function just runs analysis once the transcript
 // arrives. If there's no usable text we still need to clear the loading bar.
-function appendTranscript(final: string): void {
-  const id = activeId()
+// The note id is the one pinned when recording started, not whatever tab is
+// active now.
+function appendTranscript(noteId: string, final: string): void {
+  const id = noteId
   console.log('[appendTranscript] start', { id, hasText: !!final.trim(), textLen: final.trim().length })
   if (!id || !final.trim()) {
     panel.setLoading(false)
@@ -534,13 +564,16 @@ mountTranscriptionUI({
   transcriptEl,
   toggleEl: recordBtn,
   getNoteId: () => activeId() ?? '',
-  // Fires the instant the user clicks Stop. Open the panel and turn the
-  // loading bar on right away so the UI feels responsive while the cleanup
+  // Fires the instant the user clicks Stop. Bring the recorded note on screen
+  // first (it may have been left behind by a tab switch), then open the panel
+  // and turn the loading bar on so the UI feels responsive while the cleanup
   // + analysis calls (a few seconds total) run in the background.
-  onRecordingStopped: () => {
-    if (!activeId()) return
-    panel.show()
-    panel.setLoading(true)
+  onRecordingStopped: (noteId) => {
+    if (!noteId) return
+    void focusNoteTab(noteId).then(() => {
+      panel.show()
+      panel.setLoading(true)
+    })
   },
   onTranscriptReady: appendTranscript
 })
@@ -581,26 +614,47 @@ placeholderEl.querySelector('[data-action="open-existing"]')?.addEventListener('
 const help = mountHelp()
 helpBtn.addEventListener('click', () => help.toggle())
 
+const settings = mountSettings()
+settingsBtn.addEventListener('click', () => settings.toggle())
+
 document.addEventListener('keydown', (e) => {
   if (!(e.metaKey || e.ctrlKey) || e.altKey) return
   const key = e.key.toLowerCase()
-  if (!e.shiftKey && key === 'n') {
+  if (!e.shiftKey && key === 'n' && kb.newNote) {
     e.preventDefault()
     void createInNewTab()
-  } else if (!e.shiftKey && key === 't') {
+  } else if (!e.shiftKey && key === 't' && kb.newTab) {
     e.preventDefault()
     void openNewEmptyTab()
-  } else if (e.shiftKey && key === 't') {
+  } else if (e.shiftKey && key === 't' && kb.reopenTab) {
     e.preventDefault()
     void reopenLastClosedTab()
-  } else if (!e.shiftKey && key === 'e') {
+  } else if (!e.shiftKey && key === 'e' && kb.sidePanel) {
     e.preventDefault()
     // ⌘E is a note-context shortcut; suppress it on graph tabs where the
     // side panel is intentionally unavailable.
     if (tabs[activeTabIdx]?.kind === 'note') panel.toggle()
-  } else if (!e.shiftKey && key === '/') {
+  } else if (!e.shiftKey && key === 'o' && kb.quickOpen) {
+    e.preventDefault()
+    showNoteSearch(sidebar.notes(), (id) => void openInActiveTab(id))
+  } else if (!e.shiftKey && key === '/' && kb.help) {
     e.preventDefault()
     help.toggle()
+  } else if (editor.view.hasFocus && !e.shiftKey && key === 'b' && kb.formatBold) {
+    e.preventDefault()
+    editor.wrapSelection('**')
+  } else if (editor.view.hasFocus && !e.shiftKey && key === 'i' && kb.formatItalic) {
+    e.preventDefault()
+    editor.wrapSelection('*')
+  } else if (editor.view.hasFocus && !e.shiftKey && key === 'k' && kb.formatLink) {
+    e.preventDefault()
+    editor.wrapSelection('[', '](url)')
+  } else if (editor.view.hasFocus && e.shiftKey && key === 'c' && kb.formatCode) {
+    e.preventDefault()
+    editor.wrapSelection('`')
+  } else if (editor.view.hasFocus && e.shiftKey && key === 's' && kb.formatStrike) {
+    e.preventDefault()
+    editor.wrapSelection('~~')
   }
 })
 
@@ -619,9 +673,13 @@ async function init(): Promise<void> {
     await loadActiveTab()
   }
   renderTabs()
-  // Launch onboarding: surface the help modal every launch unless the user has
-  // ticked "Don't show this on launch" inside the modal itself.
-  if (shouldShowHelpOnLaunch()) help.open()
+  // Launch onboarding: surface the help modal on first launch only. markSeen
+  // flips the stored flag so later launches stay quiet; the checkbox inside
+  // the modal still lets the user turn the reminder back on.
+  if (shouldShowHelpOnLaunch()) {
+    help.open()
+    help.markSeen()
+  }
 }
 
 void init()
