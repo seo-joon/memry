@@ -6,6 +6,15 @@ import { autoUpdater } from 'electron-updater'
 
 export function checkForUpdates(): void {
   if (!app.isPackaged) return
+  autoUpdater.on('checking-for-update', () => {
+    console.log('[updater] checking...')
+  })
+  autoUpdater.on('update-available', (info) => {
+    console.log('[updater] available:', info.version)
+  })
+  autoUpdater.on('update-not-available', () => {
+    console.log('[updater] up to date')
+  })
   autoUpdater.on('update-downloaded', () => {
     console.log('[updater] update downloaded, installs on quit')
   })
