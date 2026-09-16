@@ -123,12 +123,12 @@ export function mountTranscriptionUI(opts: {
     status.textContent = text
   }
 
-  function showBanner(message: string, action?: { label: string; onClick: () => void }): void {
+  function showBanner(message: string, actions?: { label: string; onClick: () => void }[]): void {
     banner.replaceChildren()
     const msg = document.createElement('span')
     msg.textContent = message
     banner.appendChild(msg)
-    if (action) {
+    for (const action of actions ?? []) {
       const link = document.createElement('button')
       link.className = 'record-popover-banner-action'
       link.type = 'button'
@@ -142,6 +142,13 @@ export function mountTranscriptionUI(opts: {
   function hideBanner(): void {
     banner.hidden = true
     banner.replaceChildren()
+  }
+
+  function setMode(next: ListenMode): void {
+    mode = next
+    modeSelect.value = next
+    localStorage.setItem(MODE_PREF_KEY, next)
+    hideBanner()
   }
 
   function reflectRecording(): void {
@@ -273,7 +280,21 @@ export function mountTranscriptionUI(opts: {
       // — covers the Sequoia case where the toggle is on but capture still fails.
       const msg = err instanceof Error ? err.message : 'Could not start transcription.'
       const isScreenPerm = mode === 'system' && /screen recording|loopback|system audio|permission|notallowed/i.test(msg)
-      showBanner(msg, isScreenPerm ? { label: 'Open Settings', onClick: () => window.api.audio.openScreenSettings() } : undefined)
+      showBanner(
+        msg,
+        isScreenPerm
+          ? [
+              { label: 'Open Settings', onClick: () => window.api.audio.openScreenSettings() },
+              {
+                label: 'Use microphone instead',
+                onClick: () => {
+                  setMode('microphone')
+                  void start()
+                }
+              }
+            ]
+          : undefined
+      )
     }
   }
 
@@ -353,9 +374,7 @@ export function mountTranscriptionUI(opts: {
   })
 
   modeSelect.addEventListener('change', () => {
-    mode = modeSelect.value as ListenMode
-    localStorage.setItem(MODE_PREF_KEY, mode)
-    hideBanner()
+    setMode(modeSelect.value as ListenMode)
   })
 
   liveToggle.addEventListener('change', () => {

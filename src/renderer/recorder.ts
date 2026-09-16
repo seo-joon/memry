@@ -148,7 +148,7 @@ export class Recorder {
                 () =>
                   reject(
                     new Error(
-                      'System audio capture timed out. Screen Recording permission appears stale (Sequoia bug). Open Terminal and run `tccutil reset ScreenCapture`, then re-toggle Electron in System Settings and relaunch Memry.'
+                      'System audio capture timed out. The Screen Recording entry is stale: quit Memry, turn Memry off and back on in System Settings, then reopen Memry. (When running from code, toggle Electron instead.)'
                     )
                   ),
                 8_000
