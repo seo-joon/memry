@@ -1,6 +1,6 @@
 {
   "name": "memry",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "A lightweight, single-user note-taking app with AI meeting/lecture transcription.",
   "main": "./out/main/index.js",
   "author": "Alex Zhang",
