@@ -26,7 +26,8 @@ import { startSession, appendChunk, endSession } from './services/transcript-buf
 import {
   ensureMicAccess,
   screenAccessStatus,
-  openScreenRecordingSettings
+  openScreenRecordingSettings,
+  repairScreenRecording
 } from './audio-permissions'
 import { getOverlayWindow, setQuickCaptureEnabled, setCloseTabEnabled } from './windows'
 import { getKeybinds, setKeybind } from './prefs'
@@ -121,6 +122,7 @@ export function registerIpc(): void {
   ipcMain.handle(CH.micEnsure, () => ensureMicAccess())
   ipcMain.handle(CH.screenStatus, () => screenAccessStatus())
   ipcMain.on(CH.screenOpen, () => openScreenRecordingSettings())
+  ipcMain.handle(CH.screenRepair, () => repairScreenRecording())
 
   // --- overlay quick capture ---
   ipcMain.handle(CH.overlaySave, async (_e, text: string) => {

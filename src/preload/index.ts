@@ -32,6 +32,7 @@ const api: Api = {
     ensureMic: () => ipcRenderer.invoke(CH.micEnsure),
     screenStatus: () => ipcRenderer.invoke(CH.screenStatus),
     openScreenSettings: () => ipcRenderer.send(CH.screenOpen),
+    repairScreen: () => ipcRenderer.invoke(CH.screenRepair),
     // These two channels are registered by electron-audio-loopback's initMain() in main.
     enableLoopback: () => ipcRenderer.invoke('enable-loopback-audio'),
     disableLoopback: () => ipcRenderer.invoke('disable-loopback-audio')

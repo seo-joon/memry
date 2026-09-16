@@ -284,6 +284,15 @@ export function mountTranscriptionUI(opts: {
         msg,
         isScreenPerm
           ? [
+              {
+                label: 'Repair permission',
+                onClick: () => {
+                  setStatus('Clearing the stale entry. Memry will reopen — press Start again.')
+                  void window.api.audio.repairScreen().then((ok) => {
+                    if (!ok) setStatus('Repair failed. Turn Memry off and back on in System Settings instead.')
+                  })
+                }
+              },
               { label: 'Open Settings', onClick: () => window.api.audio.openScreenSettings() },
               {
                 label: 'Use microphone instead',

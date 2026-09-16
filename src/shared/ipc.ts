@@ -28,6 +28,7 @@ export const CH = {
   micEnsure: 'audio:micEnsure', // () => boolean  (prompt mic if not-determined)
   screenStatus: 'audio:screenStatus', // () => MediaAccessStatus  (read-only)
   screenOpen: 'audio:screenOpen', // () => void  (deep-link System Settings > Screen Recording)
+  screenRepair: 'audio:screenRepair', // () => boolean  (reset own entry + relaunch)
 
   // --- overlay quick capture ---
   overlaySave: 'overlay:save', // (text) => TreeNote  (quick note -> Quick Notes folder, then hide)
@@ -175,6 +176,7 @@ export interface Api {
     ensureMic(): Promise<boolean>
     screenStatus(): Promise<MediaAccessStatus>
     openScreenSettings(): void
+    repairScreen(): Promise<boolean>
     // System-audio loopback (handled by electron-audio-loopback's initMain in the
     // main process). Renderer enables it, calls getDisplayMedia, then disables it.
     enableLoopback(): Promise<void>

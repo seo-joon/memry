@@ -148,7 +148,7 @@ export class Recorder {
                 () =>
                   reject(
                     new Error(
-                      'System audio capture timed out. The Screen Recording entry is stale: quit Memry, turn Memry off and back on in System Settings, then reopen Memry. (When running from code, toggle Electron instead.)'
+                      'System audio capture timed out. The Screen Recording entry is stale: press Repair permission below, or quit Memry, turn Memry off and back on in System Settings, then reopen Memry. (When running from code, toggle Electron instead.)'
                     )
                   ),
                 8_000
