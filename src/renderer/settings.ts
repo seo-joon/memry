@@ -36,6 +36,11 @@ export function mountSettings(): SettingsHandle {
           <span class="settings-status" data-status></span>
         </div>
         <p class="settings-note">Keys stay on this Mac. They apply straight away.</p>
+        <h2 class="settings-subhead">Appearance</h2>
+        <label class="settings-shortcut">
+          <input type="checkbox" data-dark />
+          <span>Dark theme</span>
+        </label>
         <h2 class="settings-subhead">Shortcuts</h2>
         <p class="settings-note">Switch off anything that clashes with your other apps.</p>
         <div class="settings-shortcuts" data-shortcuts></div>
@@ -49,6 +54,19 @@ export function mountSettings(): SettingsHandle {
   const saveEl = modal.querySelector<HTMLButtonElement>('[data-save]') as HTMLButtonElement
   const statusEl = modal.querySelector<HTMLElement>('[data-status]') as HTMLElement
   const shortcutsEl = modal.querySelector<HTMLElement>('[data-shortcuts]') as HTMLElement
+  const darkEl = modal.querySelector<HTMLInputElement>('[data-dark]') as HTMLInputElement
+
+  darkEl.addEventListener('change', () => {
+    const next = darkEl.checked ? 'dark' : 'light'
+    statusEl.textContent = next === 'dark' ? 'Dark theme on.' : 'Dark theme off.'
+    void window.api.theme.set(next).then(
+      () => undefined,
+      () => {
+        darkEl.checked = !darkEl.checked
+        statusEl.textContent = 'Could not save that change.'
+      }
+    )
+  })
 
   // One checkbox row per shortcut, built from the shared list so labels and
   // key names never drift from the help page.
@@ -98,6 +116,12 @@ export function mountSettings(): SettingsHandle {
     void window.api.keybinds.get().then(
       (map) => {
         for (const [id, box] of boxes) box.checked = map[id] ?? box.checked
+      },
+      () => undefined
+    )
+    void window.api.theme.get().then(
+      (t) => {
+        darkEl.checked = t === 'dark'
       },
       () => undefined
     )

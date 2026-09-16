@@ -1,7 +1,7 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron'
+import { ipcMain, dialog, nativeTheme, BrowserWindow } from 'electron'
 import type { Rectangle } from 'electron'
 import { CH } from '../shared/ipc'
-import type { CreateNote, SessionId, SettingsKeys } from '../shared/ipc'
+import type { CreateNote, SessionId, SettingsKeys, Theme } from '../shared/ipc'
 import {
   readVaultTree,
   readNote,
@@ -30,7 +30,7 @@ import {
   repairScreenRecording
 } from './audio-permissions'
 import { getOverlayWindow, setQuickCaptureEnabled, setCloseTabEnabled } from './windows'
-import { getKeybinds, setKeybind } from './prefs'
+import { getKeybinds, setKeybind, getTheme, setTheme } from './prefs'
 import { createSticky, getStickyText, updateSticky, closeSticky, setStickiesVisible } from './stickies'
 
 export function registerIpc(): void {
@@ -116,6 +116,16 @@ export function registerIpc(): void {
       setCloseTabEnabled(on)
     }
     return map
+  })
+
+  // --- theme (applies at once everywhere: native chrome + all windows) ---
+  ipcMain.handle(CH.themeGet, () => getTheme())
+  ipcMain.handle(CH.themeSet, async (_e, t: Theme) => {
+    const next: Theme = t === 'dark' ? 'dark' : 'light'
+    await setTheme(next)
+    nativeTheme.themeSource = next
+    for (const w of BrowserWindow.getAllWindows()) w.webContents.send(CH.themeChanged, next)
+    return next
   })
 
   // --- audio permissions ---

@@ -1,4 +1,7 @@
 import './style.css'
+import { initTheme } from './theme'
+
+initTheme()
 
 const input = document.getElementById('overlay-input') as HTMLTextAreaElement
 const stickyBtn = document.getElementById('overlay-sticky') as HTMLButtonElement

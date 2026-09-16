@@ -1,5 +1,6 @@
 import './style.css'
 import { createEditor } from './editor/editor'
+import { initTheme } from './theme'
 
 // A sticky window learns its id from the URL (sticky.html?id=…) and pulls its text
 // from main. Same CodeMirror live-preview editor as the main app, just no gutter —
@@ -37,6 +38,8 @@ const editor = createEditor(editorEl, {
     timer = setTimeout(() => window.api.stickies.update(id, md), 250)
   }
 })
+
+initTheme((t) => editor.setTheme(t === 'dark'))
 
 async function load(): Promise<void> {
   editor.setContent(await window.api.stickies.get(id))

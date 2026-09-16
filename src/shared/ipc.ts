@@ -4,6 +4,8 @@
 // - renderer imports the `Api` type to stay in sync.
 // Adding a channel = one line in CH + one wrapper in preload + one handler in main.
 
+export type Theme = 'light' | 'dark'
+
 export const CH = {
   // --- vault / notes (invoke = request/response) ---
   vaultTree: 'vault:tree', // () => VaultTree   (nested folders + flat notes)
@@ -29,6 +31,11 @@ export const CH = {
   screenStatus: 'audio:screenStatus', // () => MediaAccessStatus  (read-only)
   screenOpen: 'audio:screenOpen', // () => void  (deep-link System Settings > Screen Recording)
   screenRepair: 'audio:screenRepair', // () => boolean  (reset own entry + relaunch)
+
+  // --- theme ---
+  themeGet: 'theme:get', // () => Theme
+  themeSet: 'theme:set', // (Theme) => Theme  (applies + broadcasts to all windows)
+  themeChanged: 'theme:changed', // MAIN->RENDERER push: Theme
 
   // --- overlay quick capture ---
   overlaySave: 'overlay:save', // (text) => TreeNote  (quick note -> Quick Notes folder, then hide)
@@ -215,5 +222,10 @@ export interface Api {
   keybinds: {
     get(): Promise<KeybindMap>
     set(id: string, on: boolean): Promise<KeybindMap>
+  }
+  theme: {
+    get(): Promise<Theme>
+    set(t: Theme): Promise<Theme>
+    onChange(cb: (t: Theme) => void): () => void // subscribe; returns unsubscribe
   }
 }

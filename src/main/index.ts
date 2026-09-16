@@ -14,7 +14,7 @@ import {
 import { registerIpc } from './ipc'
 import { restoreStickies, flushStickies } from './stickies'
 import { loadUserKeys } from './keys'
-import { getKeybinds } from './prefs'
+import { getKeybinds, getTheme } from './prefs'
 import { checkForUpdates } from './updater'
 
 // Load env vars BEFORE any service that consumes them. In dev we want the
@@ -29,11 +29,8 @@ dotenv.config({
 // bar; production reads productName from package.json. Force the user-facing name early.
 app.setName('Memry')
 
-// Force light appearance app-wide. Without this, `vibrancy: 'sidebar'` on the editor
-// window adapts to the user's macOS theme — in dark mode it renders a near-black
-// frosted material, which clashes with the white editor pane. Locked to light so the
-// sidebar / topbar / side panel always show the light frosted-white variant.
-nativeTheme.themeSource = 'light'
+// Appearance follows the stored theme (Settings > Appearance); applied at boot
+// inside whenReady below, before any window is created.
 
 // Privileged scheme registration must happen before app is ready.
 registerMemrySchemePrivileged()
@@ -90,6 +87,10 @@ function buildAppMenu(): Electron.Menu {
 
 app.whenReady().then(async () => {
   Menu.setApplicationMenu(buildAppMenu())
+  // Stored theme drives the native chrome (vibrancy, menus, dialogs) so it
+  // matches the CSS vars. Without this, `vibrancy: 'sidebar'` follows the
+  // macOS theme and clashes with the editor pane in the other mode.
+  nativeTheme.themeSource = await getTheme()
   // Per-Mac keys from Settings (Keychain-encrypted). Anything already in the
   // environment (dev .env) wins.
   await loadUserKeys()

@@ -1,4 +1,4 @@
-import { Annotation, EditorState, EditorSelection, Transaction } from '@codemirror/state'
+import { Annotation, Compartment, EditorState, EditorSelection, Transaction } from '@codemirror/state'
 import { EditorView, keymap, lineNumbers, type KeyBinding } from '@codemirror/view'
 import { history, defaultKeymap, historyKeymap } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
@@ -6,14 +6,29 @@ import { livePreview } from './livepreview'
 import { ghostText, type GhostTextOptions } from './ghost-text'
 import { imagePaste, type ImagePasteOptions } from './image-paste'
 
+// Dark CodeMirror surface: the chrome flips via CSS vars, but the caret and
+// content color come from CodeMirror's own base theme, so they need an
+// explicit dark variant. `{ dark: true }` also gives us the darker default
+// selection. Toggled through a compartment — no editor rebuild.
+const darkCodeTheme = EditorView.theme(
+  {
+    '&': { color: 'var(--text)' },
+    '.cm-content': { caretColor: 'var(--text)' },
+    '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--text)' }
+  },
+  { dark: true }
+)
+
 // Marks a programmatic content load (disk read) so the change doesn't fire onChange
 // and trigger an autosave of the note's own just-loaded content.
 const externalLoad = Annotation.define<boolean>()
+const themeCompartment = new Compartment()
 
 export interface EditorHandle {
   view: EditorView
   getContent(): string
   setContent(md: string): void
+  setTheme(dark: boolean): void
   wrapSelection(before: string, after?: string): void
   appendBlock(text: string): void
   destroy(): void
@@ -54,6 +69,7 @@ export function createEditor(parent: HTMLElement, opts: CreateEditorOptions): Ed
         markdown(),
         livePreview({ onOpenNote: opts.onOpenNote }),
         ...(opts.imagePaste ? [imagePaste(opts.imagePaste)] : []),
+        themeCompartment.of([]),
         EditorView.lineWrapping,
         EditorView.updateListener.of((u) => {
           if (u.docChanged && !u.transactions.some((t) => t.annotation(externalLoad))) {
@@ -96,5 +112,11 @@ export function createEditor(parent: HTMLElement, opts: CreateEditorOptions): Ed
     view.dispatch({ changes: { from: end, insert: text } })
   }
 
-  return { view, getContent, setContent, wrapSelection, appendBlock, destroy: () => view.destroy() }
+  // Theme flip without a rebuild: the compartment swaps the dark CodeMirror
+  // surface in and out.
+  const setTheme = (dark: boolean): void => {
+    view.dispatch({ effects: themeCompartment.reconfigure(dark ? darkCodeTheme : []) })
+  }
+
+  return { view, getContent, setContent, setTheme, wrapSelection, appendBlock, destroy: () => view.destroy() }
 }

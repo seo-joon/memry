@@ -37,6 +37,32 @@
     monospace;
 }
 
+/* Dark theme: same var names, warm-dark values. Applies when main pushes the
+ * stored theme (Settings > Appearance) — `data-theme` flips on every window
+ * at once, so editor, overlay and stickies change together. `color-scheme`
+ * recolors native controls and scrollbars to match. */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: rgba(28, 28, 26, 0.9);
+  --bg-panel: #232322;
+  --bg-sidebar: #1c1c1a;
+  --bg-topbar: #1c1c1a;
+  --bg-subtle: #2a2a28;
+  --bg-hover: #34332f;
+  --bg-hover-strong: #45443d;
+  --border: #383733;
+  --border-strong: #4c4b44;
+  --text: #ece9e1;
+  --text-muted: #9b978b;
+  --accent: #5b8cff;
+  --accent-soft: #2a3a5f;
+  --danger: #e0685f;
+  --sticky: #2b2a27;
+  --sticky-bar: #232322;
+  --sticky-bar-text: #9b978b;
+}
+
 * {
   box-sizing: border-box;
 }

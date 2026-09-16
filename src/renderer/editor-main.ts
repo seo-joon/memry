@@ -7,6 +7,7 @@ import { mountSidePanel, GRAPH_DRAG_MIME } from './sidepanel'
 import { mountGraph, type GraphHandle } from './graph'
 import { mountHelp, shouldShowHelpOnLaunch } from './help'
 import { mountSettings } from './settings'
+import { initTheme } from './theme'
 import { KEYBINDS } from '../shared/keybinds'
 
 const sidebarEl = document.getElementById('sidebar') as HTMLElement
@@ -113,6 +114,9 @@ const editor = createEditor(editorEl, {
     writeAsset: (filename, base64) => window.api.vault.writeAsset(filename, base64)
   }
 })
+
+// Stored theme applies to the chrome (style.css) and the CodeMirror surface.
+initTheme((t) => editor.setTheme(t === 'dark'))
 
 const panel = mountSidePanel({
   // Re-analyze re-runs the active entry on its preserved source text. The entry
